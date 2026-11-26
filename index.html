@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STEMwithLong — Mô phỏng Cầu STEM</title>
+  <meta name="description" content="Nền tảng mô phỏng xây cầu STEM tương tác cho học sinh K-12. Xây cầu, kiểm tra chịu lực, học vật lý kỹ thuật." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Matter.js physics -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <!-- jsPDF for export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ======= HEADER ======= -->
+<header id="header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 4L36 14V26L20 36L4 26V14L20 4Z" fill="url(#grad1)" opacity="0.9"/>
+          <path d="M8 24L20 10L32 24" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="8" y1="24" x2="32" y2="24" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="14" y1="24" x2="20" y2="10" stroke="white" stroke-width="1.5" stroke-dasharray="2 2"/>
+          <line x1="26" y1="24" x2="20" y2="10" stroke="white" stroke-width="1.5" stroke-dasharray="2 2"/>
+          <defs>
+            <linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#10b981"/>
+              <stop offset="100%" stop-color="#0ea5e9"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">STEMwith<span class="brand-accent">Long</span></span>
+        <span class="brand-sub">Mô phỏng Cầu STEM · K–12</span>
+      </div>
+      <span class="badge-stem">2D · Vật lý</span>
+    </div>
+
+    <nav class="nav-pills" id="navPills">
+      <button class="nav-pill active" data-view="simulator" onclick="switchView('simulator')">
+        🏗️ Xây Cầu
+      </button>
+      <button class="nav-pill" data-view="library" onclick="switchView('library')">
+        📐 Mẫu Cầu
+      </button>
+      <button class="nav-pill" data-view="leaderboard" onclick="switchView('leaderboard')">
+        🏆 Bảng Xếp Hạng
+      </button>
+      <button class="nav-pill" data-view="teacher" onclick="switchView('teacher')">
+        👩‍🏫 Góc Giáo Viên
+      </button>
+    </nav>
+
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ======= HERO SECTION ======= -->
+<section class="hero" id="heroSection">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-tag">🏗️ STEM · Kỹ thuật Xây dựng · Lớp 6–12</div>
+    <h1 class="hero-title">Xây <span class="text-gradient">Cầu STEM</span><br/>Khám phá Vật lý Kết cấu</h1>
+    <p class="hero-desc">Thiết kế cầu với vật liệu thực tế, kiểm tra chịu lực, quan sát lực kéo/nén từng thanh qua heatmap màu sắc trực quan.</p>
+    <div class="hero-stats">
+      <div class="stat-item"><span class="stat-num">5</span><span class="stat-label">Loại vật liệu</span></div>
+      <div class="stat-item"><span class="stat-num">6</span><span class="stat-label">Mẫu cầu chuẩn</span></div>
+      <div class="stat-item"><span class="stat-num">K–12</span><span class="stat-label">Phù hợp lớp</span></div>
+    </div>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="switchView('simulator')">🚀 Bắt đầu Xây Cầu</button>
+      <button class="btn-secondary" onclick="switchView('library')">📐 Xem Mẫu Cầu</button>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <canvas id="heroCanvas" width="500" height="300"></canvas>
+    <div class="hero-canvas-label">Mô phỏng cầu dàn tam giác — kéo thả để xây!</div>
+  </div>
+</section>
+
+<!-- ======= MAIN CONTENT ======= -->
+<main id="mainContent">
+
+  <!-- ===== VIEW: SIMULATOR ===== -->
+  <div id="view-simulator" class="view active">
+
+    <!-- Toolbar -->
+    <div class="toolbar-wrapper">
+      <div class="toolbar">
+
+        <div class="toolbar-section">
+          <span class="toolbar-label">📦 Vật liệu</span>
+          <div class="material-buttons">
+            <button class="mat-btn active" data-mat="popsicle" onclick="selectMaterial('popsicle')" title="Que kem — nhẹ, yếu">
+              <span class="mat-icon">🟫</span>
+              <span class="mat-name">Que Kem</span>
+              <span class="mat-prop">Nhẹ · Yếu</span>
+            </button>
+            <button class="mat-btn" data-mat="wood" onclick="selectMaterial('wood')" title="Gỗ — trung bình">
+              <span class="mat-icon">🪵</span>
+              <span class="mat-name">Gỗ</span>
+              <span class="mat-prop">TB · TB</span>
+            </button>
+            <button class="mat-btn" data-mat="steel" onclick="selectMaterial('steel')" title="Thép — nặng, rất chắc">
+              <span class="mat-icon">⚙️</span>
+              <span class="mat-name">Thép</span>
+              <span class="mat-prop">Nặng · Chắc</span>
+            </button>
+            <button class="mat-btn" data-mat="carbon" onclick="selectMaterial('carbon')" title="Carbon — siêu nhẹ, chắc">
+              <span class="mat-icon">🔬</span>
+              <span class="mat-name">Carbon</span>
+              <span class="mat-prop">Siêu nhẹ</span>
+            </button>
+            <button class="mat-btn" data-mat="rope" onclick="selectMaterial('rope')" title="Dây cáp — chỉ chịu kéo">
+              <span class="mat-icon">🧵</span>
+              <span class="mat-name">Cáp</span>
+              <span class="mat-prop">Chỉ kéo</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-section">
+          <span class="toolbar-label">🛠️ Công cụ</span>
+          <div class="tool-buttons">
+            <button class="tool-btn active" id="toolAdd" onclick="setTool('add')" title="Thêm thanh (kéo nối 2 nút)">
+              ➕ Thêm Thanh
+            </button>
+            <button class="tool-btn" id="toolNode" onclick="setTool('node')" title="Thêm nút khớp tự do">
+              ⭕ Thêm Nút
+            </button>
+            <button class="tool-btn" id="toolDelete" onclick="setTool('delete')" title="Xóa thanh / nút">
+              🗑️ Xóa
+            </button>
+            <button class="tool-btn" id="toolMove" onclick="setTool('move')" title="Di chuyển nút">
+              ✋ Di Chuyển
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-section">
+          <span class="toolbar-label">⚡ Hành động</span>
+          <div class="action-buttons">
+            <button class="action-btn run" id="btnTest" onclick="toggleTest()">
+              ▶️ Chạy Kiểm Tra
+            </button>
+            <button class="action-btn" onclick="resetBridge()">🔄 Làm Lại</button>
+            <button class="action-btn" onclick="showTemplates()">📐 Mẫu Có Sẵn</button>
+            <button class="action-btn" onclick="saveScore()">💾 Lưu Điểm</button>
+            <button class="action-btn" onclick="exportReport()">📊 Xuất Báo Cáo</button>
+          </div>
+        </div>
+
+        <div class="toolbar-section">
+          <span class="toolbar-label">👁️ Hiển thị</span>
+          <div class="display-buttons">
+            <label class="toggle-label">
+              <input type="checkbox" id="showHeatmap" checked onchange="toggleHeatmap()"/>
+              🌡️ Heatmap lực
+            </label>
+            <label class="toggle-label">
+              <input type="checkbox" id="showLabels" checked onchange="toggleLabels()"/>
+              🏷️ Nhãn lực
+            </label>
+            <label class="toggle-label">
+              <input type="checkbox" id="showGrid" checked onchange="toggleGrid()"/>
+              📏 Lưới
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Load Control -->
+    <div class="load-control-bar">
+      <span class="load-label">🏋️ Tải trọng kiểm tra:</span>
+      <input type="range" id="loadSlider" min="1" max="10" value="3" oninput="updateLoad(this.value)" />
+      <span id="loadValue" class="load-value">3 tấn</span>
+      <span class="load-sep">|</span>
+      <span class="load-label">Nhịp cầu:</span>
+      <input type="range" id="spanSlider" min="400" value="600" max="900" oninput="updateSpan(this.value)" />
+      <span id="spanValue" class="load-value">600 px</span>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="simCanvas"></canvas>
+
+      <!-- Status overlay -->
+      <div class="sim-status" id="simStatus">
+        <div class="status-pill" id="statusPill">🏗️ Chế độ xây dựng — kéo thả để nối thanh</div>
+      </div>
+
+      <!-- Hint overlay -->
+      <div class="hint-overlay" id="hintOverlay">
+        <div class="hint-box">
+          <div class="hint-icon">👇</div>
+          <div class="hint-text">Click để đặt điểm đầu → kéo đến điểm cuối để tạo thanh<br/>
+          Hoặc chọn <strong>Mẫu Có Sẵn</strong> để bắt đầu nhanh</div>
+          <button class="hint-close" onclick="closeHint()">Hiểu rồi!</button>
+        </div>
+      </div>
+
+      <!-- Results panel -->
+      <div class="results-panel" id="resultsPanel" style="display:none">
+        <div class="results-header">
+          <span id="resultsIcon">📊</span>
+          <span id="resultsTitle">Kết quả kiểm tra</span>
+          <button onclick="closeResults()">✕</button>
+        </div>
+        <div class="results-body" id="resultsBody"></div>
+      </div>
+    </div>
+
+    <!-- Info Bar -->
+    <div class="info-bar">
+      <div class="info-item">🔗 Thanh: <strong id="barCount">0</strong></div>
+      <div class="info-item">⭕ Nút: <strong id="nodeCount">0</strong></div>
+      <div class="info-item">⚖️ Khối lượng: <strong id="totalMass">0.0</strong> kg</div>
+      <div class="info-item">💰 Chi phí: <strong id="totalCost">0</strong> VNĐ</div>
+      <div class="info-item" id="maxForceBar" style="display:none">🔴 Lực max: <strong id="maxForceVal">0</strong> kN</div>
+      <div class="info-item score-display" id="scoreBar" style="display:none">🏆 Điểm: <strong id="scoreVal">0</strong></div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend-bar">
+      <span class="legend-title">Heatmap lực:</span>
+      <span class="legend-item"><span class="dot" style="background:#ef4444"></span> Kéo căng (tension)</span>
+      <span class="legend-item"><span class="dot" style="background:#3b82f6"></span> Nén ép (compression)</span>
+      <span class="legend-item"><span class="dot" style="background:#22c55e"></span> Nhàn (không lực)</span>
+      <span class="legend-item"><span class="dot" style="background:#f59e0b"></span> Trung bình</span>
+    </div>
+
+  </div>
+
+  <!-- ===== VIEW: LIBRARY ===== -->
+  <div id="view-library" class="view">
+    <div class="view-header">
+      <h2>📐 Thư viện Mẫu Cầu</h2>
+      <p>Chọn loại cầu để tìm hiểu nguyên lý kết cấu — sau đó nhấn <strong>Thực hành</strong> để xây trong mô phỏng</p>
+    </div>
+
+    <div class="bridge-grid" id="bridgeLibrary"></div>
+  </div>
+
+  <!-- ===== VIEW: LEADERBOARD ===== -->
+  <div id="view-leaderboard" class="view">
+    <div class="view-header">
+      <h2>🏆 Bảng Xếp Hạng</h2>
+      <p>Ai xây được cầu chịu lực nhất với chi phí thấp nhất?</p>
+    </div>
+
+    <div class="leaderboard-container">
+      <div class="lb-controls">
+        <button class="lb-tab active" data-sort="score" onclick="sortLeaderboard('score')">🏅 Điểm Cao Nhất</button>
+        <button class="lb-tab" data-sort="efficiency" onclick="sortLeaderboard('efficiency')">⚡ Hiệu Quả Nhất</button>
+        <button class="lb-tab" data-sort="load" onclick="sortLeaderboard('load')">💪 Chịu Lực Nhất</button>
+        <button class="lb-btn-clear" onclick="clearLeaderboard()">🗑️ Xóa tất cả</button>
+      </div>
+      <div class="lb-table-wrapper">
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tên</th>
+              <th>Loại Cầu</th>
+              <th>Vật Liệu</th>
+              <th>Tải (tấn)</th>
+              <th>Chi Phí</th>
+              <th>Hiệu Quả</th>
+              <th>Điểm</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+      <div class="lb-empty" id="lbEmpty">
+        <div class="lb-empty-icon">🏗️</div>
+        <div>Chưa có kết quả nào — hãy xây cầu và lưu điểm!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: TEACHER ===== -->
+  <div id="view-teacher" class="view">
+    <div class="view-header">
+      <h2>👩‍🏫 Góc Giáo Viên</h2>
+      <p>Tạo bài thực hành, quản lý học sinh, xem kết quả lớp học</p>
+    </div>
+
+    <div class="teacher-grid">
+
+      <!-- PIN unlock -->
+      <div class="teacher-card pin-card" id="teacherLock">
+        <div class="pin-icon">🔐</div>
+        <h3>Đăng nhập Giáo viên</h3>
+        <p>Nhập mã PIN để truy cập bảng điều khiển giáo viên</p>
+        <div class="pin-input-row">
+          <input type="password" id="pinInput" placeholder="Nhập PIN..." maxlength="6" />
+          <button onclick="unlockTeacher()">Mở khóa</button>
+        </div>
+        <div class="pin-hint">PIN mặc định demo: <code>2026</code></div>
+        <div class="pin-error" id="pinError"></div>
+      </div>
+
+      <!-- Teacher dashboard (hidden until unlock) -->
+      <div class="teacher-dashboard" id="teacherDash" style="display:none">
+
+        <div class="teacher-card">
+          <h3>📋 Tạo Bài Thực Hành</h3>
+          <div class="form-group">
+            <label>Tên bài thực hành</label>
+            <input type="text" id="assignTitle" placeholder="VD: Thiết kế cầu dàn tam giác Lớp 8" />
+          </div>
+          <div class="form-group">
+            <label>Loại cầu yêu cầu</label>
+            <select id="assignType">
+              <option value="any">Tự do (bất kỳ)</option>
+              <option value="truss">Cầu Dàn (Truss)</option>
+              <option value="beam">Cầu Dầm (Beam)</option>
+              <option value="arch">Cầu Vòm (Arch)</option>
+              <option value="cable">Cầu Dây Văng</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tải trọng tối thiểu (tấn)</label>
+            <input type="number" id="assignLoad" min="1" max="10" value="3" />
+          </div>
+          <div class="form-group">
+            <label>Hạn nộp bài</label>
+            <input type="date" id="assignDue" />
+          </div>
+          <div class="form-group">
+            <label>Ghi chú cho học sinh</label>
+            <textarea id="assignNote" rows="3" placeholder="Hướng dẫn, yêu cầu thêm..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="createAssignment()">📤 Tạo & Lấy Link Chia Sẻ</button>
+          <div class="assign-link" id="assignLink" style="display:none">
+            <strong>🔗 Link bài thực hành:</strong>
+            <code id="assignLinkText"></code>
+            <button onclick="copyAssignLink()">📋 Sao chép</button>
+          </div>
+        </div>
+
+        <div class="teacher-card">
+          <h3>📊 Thống kê Lớp học</h3>
+          <div class="stats-grid" id="teacherStats">
+            <div class="stat-card"><div class="stat-n" id="statTotal">0</div><div class="stat-l">Bài nộp</div></div>
+            <div class="stat-card"><div class="stat-n" id="statPass">0</div><div class="stat-l">Đạt yêu cầu</div></div>
+            <div class="stat-card"><div class="stat-n" id="statAvgScore">0</div><div class="stat-l">Điểm TB</div></div>
+            <div class="stat-card"><div class="stat-n" id="statAvgLoad">0</div><div class="stat-l">Tải TB (tấn)</div></div>
+          </div>
+          <button class="btn-secondary" onclick="exportClassReport()">📊 Xuất Báo Cáo Lớp (PDF)</button>
+        </div>
+
+        <div class="teacher-card full-width">
+          <h3>📋 Danh sách Kết quả Học sinh</h3>
+          <div class="student-list" id="studentList">
+            <div class="empty-msg">Chưa có học sinh nào nộp bài</div>
+          </div>
+        </div>
+
+        <div class="teacher-card">
+          <h3>📚 Giáo án Gợi ý</h3>
+          <div class="lesson-plans">
+            <div class="lesson-item" onclick="openLesson(1)">
+              <span class="lesson-grade">Lớp 6–7</span>
+              <div class="lesson-info">
+                <strong>Giới thiệu kết cấu cầu dầm</strong>
+                <span>45 phút · Que kem · Vật lý đơn giản</span>
+              </div>
+              <span class="lesson-arrow">›</span>
+            </div>
+            <div class="lesson-item" onclick="openLesson(2)">
+              <span class="lesson-grade">Lớp 8</span>
+              <div class="lesson-info">
+                <strong>Cầu dàn tam giác và phân phối lực</strong>
+                <span>45 phút · Gỗ/Thép · Phân tích lực</span>
+              </div>
+              <span class="lesson-arrow">›</span>
+            </div>
+            <div class="lesson-item" onclick="openLesson(3)">
+              <span class="lesson-grade">Lớp 10–12</span>
+              <div class="lesson-info">
+                <strong>Tối ưu hóa kết cấu — Chịu lực với chi phí thấp</strong>
+                <span>60 phút · Mọi vật liệu · Phân tích nâng cao</span>
+              </div>
+              <span class="lesson-arrow">›</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ======= TEMPLATE MODAL ======= -->
+<div class="modal-overlay" id="templateModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📐 Chọn Mẫu Cầu</h3>
+      <button class="modal-close" onclick="closeTemplates()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="template-grid" id="templateGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= SAVE SCORE MODAL ======= -->
+<div class="modal-overlay" id="saveModal" style="display:none">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>💾 Lưu Kết Quả</h3>
+      <button class="modal-close" onclick="closeSaveModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tên của bạn</label>
+        <input type="text" id="playerName" placeholder="VD: Nguyễn Văn A" />
+      </div>
+      <div class="form-group">
+        <label>Lớp</label>
+        <input type="text" id="playerClass" placeholder="VD: 8A1" />
+      </div>
+      <div class="save-preview" id="savePreview"></div>
+      <button class="btn-primary" onclick="confirmSave()">✅ Lưu vào Bảng Xếp Hạng</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= LESSON MODAL ======= -->
+<div class="modal-overlay" id="lessonModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="lessonTitle">Giáo án</h3>
+      <button class="modal-close" onclick="closeLessonModal()">✕</button>
+    </div>
+    <div class="modal-body" id="lessonBody"></div>
+  </div>
+</div>
+
+<!-- ======= FOOTER ======= -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <strong>STEMwithLong</strong> — Mô phỏng Cầu STEM K–12
+      <div class="footer-sub">Học kỹ thuật xây dựng qua mô phỏng vật lý tương tác</div>
+    </div>
+    <div class="footer-links">
+      <a href="#" onclick="switchView('simulator')">🏗️ Xây Cầu</a>
+      <a href="#" onclick="switchView('library')">📐 Mẫu Cầu</a>
+      <a href="#" onclick="switchView('leaderboard')">🏆 Xếp Hạng</a>
+      <a href="#" onclick="switchView('teacher')">👩‍🏫 Giáo Viên</a>
+    </div>
+    <div class="footer-copy">© 2026 STEMwithLong · Built with ❤️ for Vietnamese K–12 STEM Education</div>
+  </div>
+</footer>
+
+<script src="js/app.js"></script>
+<script src="js/bridge.js"></script>
+<script src="js/leaderboard.js"></script>
+<script src="js/teacher.js"></script>
+<script src="js/hero.js"></script>
+</body>
+</html>
